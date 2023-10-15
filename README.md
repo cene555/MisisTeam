@@ -9,4 +9,5 @@ pip install diffusers
 # Previews
 <img src="./previews/0.jpg" width="60%">
 
-
+# Banners
+<img src="./banners/1.jpg" width="60%">
