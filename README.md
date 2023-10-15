@@ -18,3 +18,6 @@ pip install deep_translator
 
 # Banners
 <img src="./banners/1.jpg" width="60%">
+
+# Videos
+<img src="./videos/output_2_2 (44).mp4" width="60%">
