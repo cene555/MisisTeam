@@ -109,50 +109,26 @@ def create_tab_3(tab_key, image_size):
     frame_skip = 1 # display every 300 frames
 
     if init_video_upload is not None: # run only when user uploads video
-        # vid = init_video_upload.name
-        # with open(vid, mode='wb') as f:
-        #     f.write(init_video_upload.read()) # save video to disk
+        if init_video_upload is not None: # run only when user uploads video
+            vid = init_video_upload.name
+            with open(vid, mode='wb') as f:
+                f.write(init_video_upload.read()) # save video to disk
+            vidcap = cv2.VideoCapture(vid) # load video from disk
+            cur_frame = 0
+            success = True
+            frames = []
 
-        # st.markdown(f"""
-        # ### Files
-        # - {vid}
-        # """,
-        # unsafe_allow_html=True) # display file name
-
-        # vidcap = cv2.VideoCapture(vid) # load video from disk
-        # cur_frame = 0
-        # success = True
-
-        # while success:
-        #     success, frame = vidcap.read() # get next frame from video
-        #     if cur_frame % frame_skip == 0: # only analyze every n=300 frames
-        #         print('frame: {}'.format(cur_frame)) 
-        #         st.session_state[f"{tab_key}_init_image"] = Image.fromarray(frame) # convert opencv frame (with type()==numpy) into PIL Image
-        #         imageLocation.image(
-        #             st.session_state[f"{tab_key}_init_image"], 
-        #             width=image_size[1]
-        #         )
-        #     cur_frame += 1
-
-        # read a single frame
-        metadata = iio.immeta(init_video_upload.name, exclude_applied=False)
-        max_frames = int(metadata["fps"] * metadata["duration"])
-        
-        if max_frames >= 1000: 
-            frame_idx = 1000
-        else: 
-            frame_idx = max_frames // 2
-        print("\n\n\n", frame_idx, "\n\n\n\n")
-        st.write(max_frames)
-        st.session_state[f"{tab_key}_init_image"] = iio.imread(
-            init_video_upload.name,
-            index=frame_idx,
-            plugin="pyav",
-        )
-        imageLocation.image(
-                st.session_state[f"{tab_key}_init_image"], 
-                width=image_size[1]
-        )
+            while success:
+                success, frame = vidcap.read() # get next frame from video
+                if cur_frame % frame_skip == 0 and success: # only analyze every n=300 frames
+                    print('frame: {}'.format(cur_frame)) 
+                    pil_img = Image.fromarray(frame[:, :, ::-1]) # convert opencv frame (with type()==numpy) into PIL Image
+                    frames.append(pil_img)
+                    imageLocation.image(
+                        pil_img, 
+                        width=image_size[1]
+                    )
+                cur_frame += 1
 
     st.button("Сгенерировать!", key=f"{tab_key}_generate_button", on_click=None)
 
