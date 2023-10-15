@@ -5,15 +5,13 @@ import numpy as np
 import cv2
 import io
 
-# from generate import (
-#     generate_avatar, 
-#     generate_preview, 
-#     generate_banner,
-#     detector, 
-#     decoder, 
-#     controlnet, 
-#     prior
-# )
+from generate import (
+    generate_avatar, 
+    generate_preview, 
+    generate_banner,
+    decoder, 
+    prior
+)
 
 animation_options = [
     None,
@@ -74,14 +72,7 @@ if __name__ == "__main__":
                 io.BytesIO(init_image_upload.getvalue())
                 )
         else: 
-            st.session_state[f"{tab_key}_init_image"] = Image.fromarray(
-                (np.random.random(size=(800, 800, 3)) * 255).astype(np.uint8)
-                )
-
-        st.session_state[f"{tab_key}_imageLocation"].image(
-            st.session_state[f"{tab_key}_init_image"], 
-            width=800
-            )
+            st.session_state[f"{tab_key}_init_image"] = None
 
         user_image_upload = st.file_uploader(
             "Загрузи свое фото (опционально)", 
@@ -97,15 +88,14 @@ if __name__ == "__main__":
             st.session_state[f"{tab_key}_user_image"] = None
         
         if st.button(label="Сгенерировать!", key=f"{tab_key}_button"):
-            # image = generate_avatar(
-            #     decoder, controlnet, prior, 
-            #     st.session_state["preview_prompt"], 
-            #     st.session_state["preview_text"], 
-            #     st.session_state["preview_init_image"], 
-            #     st.session_state["preview_user_image_upload"], 
-            #     st.session_state["preview_animation_selectbox"], 
-            # )
-            image = Image.fromarray(np.ones((800, 800, 3), dtype=np.uint8) * np.random.randint(0, 255)) 
+            image = generate_banner(
+                decoder, prior, 
+                st.session_state[f"{tab_key}_prompt"], 
+                st.session_state[f"{tab_key}_text"], 
+                st.session_state[f"{tab_key}_init_image"], 
+                st.session_state[f"{tab_key}_user_image"], 
+                st.session_state[f"{tab_key}_animation_selectbox"], 
+            )
             st.session_state[f"{tab_key}_imageLocation"].image(image)
 
     with tab2:
@@ -143,14 +133,7 @@ if __name__ == "__main__":
                 io.BytesIO(init_image_upload.getvalue())
                 )
         else: 
-            st.session_state[f"{tab_key}_init_image"] = Image.fromarray(
-                (np.random.random(size=(800, 800, 3)) * 255).astype(np.uint8)
-                )
-
-        st.session_state[f"{tab_key}_imageLocation"].image(
-            st.session_state[f"{tab_key}_init_image"], 
-            width=800
-            )
+            st.session_state[f"{tab_key}_init_image"] = None
 
         user_image_upload = st.file_uploader(
             "Загрузи свое фото (опционально)", 
@@ -167,15 +150,14 @@ if __name__ == "__main__":
         
         if st.button(label="Сгенерировать!", key=f"{tab_key}_button"):
     
-            # image = generate_avatar(
-            #     decoder, controlnet, prior, 
-            #     st.session_state[f"{tab_key}_prompt"], 
-            #     st.session_state[f"{tab_key}_text"], 
-            #     st.session_state[f"{tab_key}_init_image"], 
-            #     st.session_state[f"{tab_key}_user_image_upload"], 
-            #     st.session_state[f"{tab_key}_animation_selectbox"], 
-            # )
-            image = Image.fromarray(np.ones((800, 800, 3), dtype=np.uint8) * np.random.randint(0, 255))
+            image = generate_avatar(
+                decoder, prior,
+                st.session_state[f"{tab_key}_prompt"], 
+                st.session_state[f"{tab_key}_text"], 
+                st.session_state[f"{tab_key}_init_image"], 
+                st.session_state[f"{tab_key}_user_image"], 
+                st.session_state[f"{tab_key}_animation_selectbox"], 
+            )
             st.session_state[f"{tab_key}_imageLocation"].image(image)
             
 
@@ -202,6 +184,19 @@ if __name__ == "__main__":
             key=f"{tab_key}_animation_selectbox"
             )
         
+        user_image_upload = st.file_uploader(
+            "Загрузи свое фото (опционально)", 
+            type=["png", "jpg", "jpeg"], 
+            accept_multiple_files=False,
+            key=f"{tab_key}_user_image_upload"
+            )
+        if user_image_upload:
+            st.session_state[f"{tab_key}_user_image"] = Image.open(
+                io.BytesIO(user_image_upload.getvalue())
+            )
+        else: 
+            st.session_state[f"{tab_key}_user_image"] = None
+            
         init_video_upload = st.file_uploader(
             "Загрузи видео", 
             type=["mp4"], 
@@ -210,7 +205,8 @@ if __name__ == "__main__":
         )
 
         frame_skip = 1 # display every 300 frames
-
+        st.session_state[f"{tab_key}_init_image"] = None
+        
         if init_video_upload is not None: # run only when user uploads video
             if init_video_upload is not None: # run only when user uploads video
                 vid = init_video_upload.name
@@ -221,24 +217,25 @@ if __name__ == "__main__":
                 cur_frame = 0
                 success = True
                 max_frames = int(vidcap.get(cv2.CAP_PROP_FRAME_COUNT))
-
+                target_frame = min(max_frames//2, 1000)
+                st.session_state[f"{tab_key}_init_image"] = None
                 while success:
                     success, frame = vidcap.read() # get next frame from video
-                    if cur_frame <= max_frames//2 and success: # only analyze every n=300 frames
-                        if cur_frame != max_frames//2: 
-                            continue
+                    if cur_frame < target_frame: # only analyze every n=300 frames
                         pil_img = Image.fromarray(frame[:, :, ::-1]) # convert opencv frame (with type()==numpy) into PIL Image
-                        st.session_state[f"{tab_key}_init_image"] = pil_img
-                        imageLocation.image(pil_img)
-                    cur_frame += 1
+                        cur_frame += 1
+                    st.session_state[f"{tab_key}_init_image"] = pil_img
+                        
+                        
+                        
 
         if st.button(label="Сгенерировать!", key=f"{tab_key}_button"):
-            # image = generate_avatar(
-            #     decoder, controlnet, prior, 
-            #     st.session_state[f"{tab_key}_prompt"], 
-            #     st.session_state[f"{tab_key}_text"], 
-            #     st.session_state[f"{tab_key}_init_image"], 
-            #     st.session_state[f"{tab_key}_animation_selectbox"], 
-            # )
-            image = Image.fromarray(np.ones((800, 800, 3), dtype=np.uint8) * np.random.randint(0, 255))
+            image = generate_preview(
+                decoder, prior,
+                st.session_state[f"{tab_key}_prompt"], 
+                st.session_state[f"{tab_key}_text"], 
+                st.session_state[f"{tab_key}_init_image"], 
+                st.session_state[f"{tab_key}_user_image"], 
+                st.session_state[f"{tab_key}_animation_selectbox"], 
+            )
             st.session_state[f"{tab_key}_imageLocation"].image(image)
