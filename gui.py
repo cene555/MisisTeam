@@ -113,6 +113,7 @@ def create_tab_3(tab_key, image_size):
             vid = init_video_upload.name
             with open(vid, mode='wb') as f:
                 f.write(init_video_upload.read()) # save video to disk
+                
             vidcap = cv2.VideoCapture(vid) # load video from disk
             cur_frame = 0
             success = True
