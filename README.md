@@ -4,6 +4,9 @@
 pip install git+https://github.com/cene555/rembg.git
 pip install streamlit
 pip install diffusers
+pip install transformers
+pip install av
+
 ```
 
 # Avatars
