@@ -67,14 +67,14 @@ def generate_avatar(decoder, prior, prompt, text=None, style_image=None, face_im
     if text is not None:
         img = deepcopy(images[0])
         W, H = img.size
-        myFont = ImageFont.truetype('DejaVuSansCondensed.ttf', 40)
+        myFont = ImageFont.truetype('cene655/drawbench/DejaVuSansCondensed.ttf', 40)
 
         draw = ImageDraw.Draw(img)
         _, _, w, h = draw.textbbox((0, 0), text, font=myFont)
-        draw.text(((W-w)/2, 25), text, font=myFont, fill=(255, 255, 255), stroke_width=2, stroke_fill=(0, 0, 0))
-        return img
+        draw.text(((W-w)/2, (H-h)/2), text, font=myFont, fill=(255, 255, 255), stroke_width=2, stroke_fill=(0, 0, 0))
+        return img.resize((800, 800))
     else:
-        return images[0]
+        return images[0].resize((800, 800))
 
     
 def generate_preview(decoder, prior, prompt, text=None, style_image=None, face_image=None, animation=None):
@@ -121,9 +121,9 @@ def generate_banner(decoder, prior, prompt, text=None, style_image=None, face_im
         img = deepcopy(images[0])
         W, H = img.size
         if len(text) < 52:
-            myFont = ImageFont.truetype('DejaVuSansCondensed.ttf', 100)
+            myFont = ImageFont.truetype('cene655/drawbench/DejaVuSansCondensed.ttf', 100)
         else:
-            myFont = ImageFont.truetype('DejaVuSansCondensed.ttf', 35)
+            myFont = ImageFont.truetype('cene655/drawbench/DejaVuSansCondensed.ttf', 35)
         draw = ImageDraw.Draw(img)
         _, _, w, h = draw.textbbox((0, 0), text, font=myFont)
         draw.text(((W-w)/2, (H-h)/2), text, font=myFont, fill=(255, 255, 255), stroke_width=2, stroke_fill=(0, 0, 0))
