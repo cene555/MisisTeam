@@ -6,6 +6,7 @@ pip install streamlit
 pip install diffusers
 pip install transformers
 pip install av
+pip install deep_translator
 
 ```
 
