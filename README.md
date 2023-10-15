@@ -20,4 +20,5 @@ pip install deep_translator
 <img src="./banners/1.jpg" width="60%">
 
 # Videos
-<img src="./videos/output_2_2 (44).mp4" width="60%">
+https://github.com/cene555/MisisTeam/assets/62886550/1e1fb527-43a5-4dd2-8321-2a7b5f5cb88e
+
