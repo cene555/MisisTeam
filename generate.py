@@ -7,6 +7,7 @@ os.environ["MKL_NUM_THREADS"] = str(N_CORES)
 os.environ["NUMEXPR_NUM_THREADS"] = str(N_CORES)
 
 os.environ["OMP_NUM_THREADS"] = str(N_CORES)
+import sys
 from diffusers import KandinskyV22PriorPipeline, KandinskyV22Pipeline, KandinskyV22PriorEmb2EmbPipeline, KandinskyV22ControlnetImg2ImgPipeline, KandinskyV22Img2ImgPipeline
 import torch
 from PIL import Image
@@ -15,10 +16,6 @@ from copy import deepcopy
 from deep_translator import GoogleTranslator
 
 from rembg import remove
-import sys
-sys.path.append('/home/jovyan/cene655/ControlNet')
-from annotator.util import resize_image, HWC3
-from annotator.midas import MidasDetector
 from diffusers import KandinskyV22PriorEmb2EmbPipeline
 from diffusers import KandinskyV22ControlnetImg2ImgPipeline
 import torch
@@ -31,20 +28,10 @@ from diffusers.models import UNet2DConditionModel
 import numpy as np
 import imageio.v3 as iio
 
-def make_hint(img, detector):
-    input_image = np.array(img)
-    img = HWC3(input_image)#resize_image(, input_image.shape[1])
-    print(img.shape)
-    H, W, C = img.shape
-    detected_map, _ = detector(img)
-    detected_map = HWC3(detected_map)
-    detected_map = torch.from_numpy(detected_map.copy()).float() / 255.0
-    hint = detected_map.permute(2, 0, 1)
-    return hint
+#from deforum_kandinsky import DeforumKandinsky
+#decoder2 = KandinskyV22Img2ImgPipeline.from_pretrained('kandinsky-community/kandinsky-2-2-decoder', torch_dtype=torch.float16).to('cuda')
 
-detector = MidasDetector()
 decoder = KandinskyV22Img2ImgPipeline.from_pretrained('kandinsky-community/kandinsky-2-2-decoder', torch_dtype=torch.float16).to('cuda')
-controlnet = KandinskyV22ControlnetImg2ImgPipeline.from_pretrained('kandinsky-community/kandinsky-2-2-controlnet-depth', torch_dtype=torch.float16).to('cuda')
 prior = KandinskyV22PriorPipeline.from_pretrained('kandinsky-community/kandinsky-2-2-prior', torch_dtype=torch.float16).to('cuda')
 
 prompt = 'pizza in the space, photo'
@@ -65,8 +52,9 @@ def delete_bg(img, img2):
                 img2[i][j] = output[i][j][:3]
     return Image.fromarray(img2)
 
-def generate_avatar(decoder, controlnet, prior, prompt, text=None, style_image=None, face_image=None, animation=None):
-        
+def generate_avatar(decoder, prior, prompt, text=None, style_image=None, face_image=None, animation=None):
+    print('face_image', face_image, 'style_image', style_image)
+    prompt = prepare_caption(prompt)
     zero_img = PIL.Image.new(mode="RGB", size=(200, 200))
     img_emb = prior(prompt=prompt, num_inference_steps=50, num_images_per_prompt=1, guidance_scale=1.0).image_embeds
     if style_image is not None:
@@ -79,19 +67,18 @@ def generate_avatar(decoder, controlnet, prior, prompt, text=None, style_image=N
     if text is not None:
         img = deepcopy(images[0])
         W, H = img.size
-        myFont = ImageFont.truetype('cene655/drawbench/DejaVuSansCondensed.ttf', 40)
+        myFont = ImageFont.truetype('DejaVuSansCondensed.ttf', 40)
 
         draw = ImageDraw.Draw(img)
         _, _, w, h = draw.textbbox((0, 0), text, font=myFont)
         draw.text(((W-w)/2, 25), text, font=myFont, fill=(255, 255, 255), stroke_width=2, stroke_fill=(0, 0, 0))
-        hint = make_hint(img, detector).unsqueeze(0).half().to('cuda').repeat(1, 1, 1, 1)
-        images2 = controlnet(image=img, strength=0.05, image_embeds=img_emb, negative_image_embeds=negative_emb.image_embeds, hint=hint, num_inference_steps=100, height=img.size[1], width=img.size[0])
-        return images2[0][0]
+        return img
     else:
         return images[0]
 
     
-def generate_preview(decoder, contronet, prior, prompt, text=None, style_image=None, face_image=None, animation=None):
+def generate_preview(decoder, prior, prompt, text=None, style_image=None, face_image=None, animation=None):
+    prompt = prepare_caption(prompt)
     prompt = '4k photo of ' + prompt
     zero_img = PIL.Image.new(mode="RGB", size=(200, 200))
     img_emb = prior(prompt=prompt, num_inference_steps=50, num_images_per_prompt=1, guidance_scale=1.5).image_embeds
@@ -113,13 +100,13 @@ def generate_preview(decoder, contronet, prior, prompt, text=None, style_image=N
         draw = ImageDraw.Draw(img)
         _, _, w, h = draw.textbbox((0, 0), text, font=myFont)
         draw.text(((W-w)/2, 25), text, font=myFont, fill=(255, 255, 255), stroke_width=2, stroke_fill=(0, 0, 0))
-        hint = make_hint(img, detector).unsqueeze(0).half().to('cuda').repeat(1, 1, 1, 1)
         #images2 = controlnet(image=img, strength=0.01, image_embeds=img_emb, negative_image_embeds=negative_emb.image_embeds, hint=hint, num_inference_steps=150, height=img.size[1], width=img.size[0])
         return img#images2[0][0]
     else:
         return images[0]
 
-def generate_banner(decoder, controlnet, prior, prompt, text=None, style_image=None, face_image=None, animation=None):
+def generate_banner(decoder, prior, prompt, text=None, style_image=None, face_image=None, animation=None):
+    prompt = prepare_caption(prompt)
     prompt = '4k photo of ' + prompt
     zero_img = PIL.Image.new(mode="RGB", size=(200, 200))
     img_emb = prior(prompt=prompt, num_inference_steps=50, num_images_per_prompt=1, guidance_scale=1.5).image_embeds
@@ -134,14 +121,12 @@ def generate_banner(decoder, controlnet, prior, prompt, text=None, style_image=N
         img = deepcopy(images[0])
         W, H = img.size
         if len(text) < 52:
-            myFont = ImageFont.truetype('cene655/drawbench/DejaVuSansCondensed.ttf', 100)
+            myFont = ImageFont.truetype('DejaVuSansCondensed.ttf', 100)
         else:
-            myFont = ImageFont.truetype('cene655/drawbench/DejaVuSansCondensed.ttf', 35)
+            myFont = ImageFont.truetype('DejaVuSansCondensed.ttf', 35)
         draw = ImageDraw.Draw(img)
         _, _, w, h = draw.textbbox((0, 0), text, font=myFont)
         draw.text(((W-w)/2, (H-h)/2), text, font=myFont, fill=(255, 255, 255), stroke_width=2, stroke_fill=(0, 0, 0))
-        hint = make_hint(img, detector).unsqueeze(0).half().to('cuda').repeat(1, 1, 1, 1)
-        images2 = controlnet(image=img, strength=0.05, image_embeds=img_emb, negative_image_embeds=negative_emb.image_embeds, hint=hint, num_inference_steps=150, height=img.size[1], width=img.size[0])
-        return images2[0][0].resize((2204, 864))
+        return img.resize((2204, 864))
     else:
         return images[0].resize((2204, 864))
